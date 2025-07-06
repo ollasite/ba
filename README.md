@@ -12,7 +12,7 @@ Kalkulator ini dapat menghitung estimasi pengembalian dana berdasarkan:
 - HTML + CSS + JavaScript
 - Tanpa framework tambahan (hanya html2canvas CDN)
 
-🚀 **Demo**: [https://username.github.io/refund-calculator/](https://ba.github.io/refund-calculator/)  
+🚀 **Demo**: [https://ollasite.github.io/refund-calculator/](https://ba.github.io/refund-calculator/)  
 (*Ganti `username` dengan username GitHub-mu setelah GitHub Pages aktif*)
 
 ---
