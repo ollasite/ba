@@ -5,77 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kalkulator Refund</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      margin: 0;
-      padding: 0;
       background: linear-gradient(135deg, #6dd5ed, #2193b0);
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      color: #333;
+      margin: 0;
     }
     .container {
-      max-width: 480px;
+      background: white;
       padding: 30px;
-      background-color: #ffffff;
       border-radius: 20px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-      animation: fadeIn 1s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 100%;
     }
-    @keyframes fadeIn {
-      from {opacity: 0; transform: translateY(-20px);}
-      to {opacity: 1; transform: translateY(0);}
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 25px;
-      color: #2193b0;
-    }
-    label {
-      margin-bottom: 5px;
-      font-weight: 600;
-    }
+    h2 { text-align: center; color: #2193b0; }
+    label { font-weight: 600; }
     input, select {
       width: 100%;
-      padding: 12px;
-      margin-bottom: 20px;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      border-radius: 10px;
-      font-size: 1em;
-      transition: border 0.3s;
-    }
-    input:focus, select:focus {
-      border-color: #2193b0;
-      outline: none;
     }
     button {
       width: 100%;
-      padding: 14px;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
       background-color: #2193b0;
       color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 1em;
-      font-weight: 600;
+      font-weight: bold;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
     }
-    button:hover {
-      background-color: #176d86;
-    }
-    .result {
-      text-align: center;
+    .result, .receipt {
       margin-top: 20px;
-      font-size: 1.5em;
-      font-weight: 700;
-      color: #2193b0;
-      background: #f0faff;
       padding: 15px;
+      background: #f0faff;
       border-radius: 10px;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+    }
+    .receipt {
+      font-size: 0.95em;
+      background: #fff;
+      border: 1px solid #ddd;
+    }
+    #sisaDurasiText {
+      margin-bottom: 15px;
+      color: #555;
     }
   </style>
 </head>
@@ -83,16 +65,16 @@
   <div class="container">
     <h2>Kalkulator Refund</h2>
 
-    <label for="hargaBeli">Harga Beli</label>
+    <label>Harga Beli</label>
     <input type="number" id="hargaBeli" placeholder="Masukkan harga beli">
 
-    <label for="tanggalBeli">Tanggal Pembelian</label>
+    <label>Tanggal Pembelian</label>
     <input type="date" id="tanggalBeli">
 
-    <label for="totalDurasi">Total Durasi Premium (hari)</label>
+    <label>Total Durasi Premium (hari)</label>
     <input type="number" id="totalDurasi" placeholder="Masukkan total durasi premium">
 
-    <label for="serviceFee">Status Garansi</label>
+    <label>Status Garansi</label>
     <select id="serviceFee">
       <option value="0.8">Kurang dari 1 minggu</option>
       <option value="0.7">Belum pernah claim garansi &gt; 1 minggu</option>
@@ -101,9 +83,14 @@
       <option value="0.4">Claim garansi &gt; 3×</option>
     </select>
 
+    <div id="sisaDurasiText"></div>
+
     <button onclick="hitungRefund()">Hitung Refund</button>
 
     <div class="result" id="hasilRefund"></div>
+
+    <div class="receipt" id="struk" style="display:none;"></div>
+    <button onclick="downloadStruk()" id="downloadBtn" style="display:none;">Download Struk (PNG)</button>
   </div>
 
   <script>
@@ -113,25 +100,53 @@
 
     function hitungRefund() {
       const hargaBeli = parseFloat(document.getElementById("hargaBeli").value);
-      const tanggalBeli = new Date(document.getElementById("tanggalBeli").value);
+      const tanggalBeliInput = document.getElementById("tanggalBeli").value;
+      const tanggalBeli = new Date(tanggalBeliInput);
       const totalDurasi = parseFloat(document.getElementById("totalDurasi").value);
-      const serviceFee = parseFloat(document.getElementById("serviceFee").value);
+      const serviceFeeSelect = document.getElementById("serviceFee");
+      const serviceFee = parseFloat(serviceFeeSelect.value);
+      const statusGaransiText = serviceFeeSelect.options[serviceFeeSelect.selectedIndex].text;
 
       if (isNaN(hargaBeli) || isNaN(totalDurasi) || !tanggalBeli.getTime()) {
         document.getElementById("hasilRefund").innerText = "Mohon isi semua kolom dengan benar.";
+        document.getElementById("struk").style.display = "none";
+        document.getElementById("downloadBtn").style.display = "none";
         return;
       }
 
       const hariIni = new Date();
-      const pemakaianMs = hariIni - tanggalBeli;
-      const pemakaianHari = Math.floor(pemakaianMs / (1000 * 60 * 60 * 24));
+      const pemakaianHari = Math.floor((hariIni - tanggalBeli) / (1000 * 60 * 60 * 24));
+      const sisaDurasi = Math.max(totalDurasi - pemakaianHari, 0);
+      const refund = (hargaBeli * sisaDurasi / totalDurasi) * serviceFee;
 
-      const sisaDurasi = totalDurasi - pemakaianHari;
-      const sisaDurasiValid = sisaDurasi > 0 ? sisaDurasi : 0;
-
-      const refund = (hargaBeli * sisaDurasiValid / totalDurasi) * serviceFee;
-
+      document.getElementById("sisaDurasiText").innerText = `Sisa Durasi: ${sisaDurasi} hari`;
       document.getElementById("hasilRefund").innerText = `Total Refund: ${formatRupiah(refund)}`;
+
+      const strukHtml = `
+        <h3 style="text-align:center;">🧾 Struk Refund 🧾</h3>
+        <p><strong>Tanggal Expired:</strong> ${hariIni.toLocaleDateString('id-ID')}</p>
+        <p><strong>Tanggal Pembelian:</strong> ${tanggalBeli.toLocaleDateString('id-ID')}</p>
+        <p><strong>Harga Beli:</strong> ${formatRupiah(hargaBeli)}</p>
+        <p><strong>Total Durasi:</strong> ${totalDurasi} hari</p>
+        <p><strong>Durasi Terpakai:</strong> ${pemakaianHari} hari</p>
+        <p><strong>Sisa Durasi:</strong> ${sisaDurasi} hari</p>
+        <p><strong>Status Garansi:</strong> ${statusGaransiText}</p>
+        <p><strong>Service Fee:</strong> ${(serviceFee * 100).toFixed(0)}%</p>
+        <hr>
+        <h4>Total Refund: ${formatRupiah(refund)}</h4>
+      `;
+      document.getElementById("struk").innerHTML = strukHtml;
+      document.getElementById("struk").style.display = "block";
+      document.getElementById("downloadBtn").style.display = "block";
+    }
+
+    function downloadStruk() {
+      html2canvas(document.getElementById("struk")).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'struk-refund.png';
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
     }
   </script>
 </body>
